@@ -12,6 +12,7 @@
 """
 __author__ = 'JHao'
 
+import base64
 import re
 import json
 from random import randint
@@ -260,10 +261,37 @@ class ProxyFetcher(object):
             for proxy in proxies:
                 yield ':'.join(proxy)
 
+    # @staticmethod
+    # def wallProxy02():
+    #     request = WebRequest()
+    #     try:
+    #         resp = request.get("https://spys.one/en/", timeout=20, verify=False).tree
+    #         # proxies = resp.xpath('//tbody/tr/td/table[2]/tbody/tr/td[1]/font[@class="spy14"]/text()')
+    #         proxies = resp.xpath('//tbody/tr/td/table[2]/tbody/tr/td[1]')
+    #         for proxy in proxies:
+    #
+    #             yield ':'.join(proxy)
+    #     except:
+    #         pass
+
+    @staticmethod
+    def wallProxy03():
+        request = WebRequest()
+        try:
+            resp = request.get("http://free-proxy.cz/en/", timeout=20, verify=False).tree
+            # proxies = resp.xpath('//tbody/tr/td/table[2]/tbody/tr/td[1]/font[@class="spy14"]/text()')
+            proxies = resp.xpath('//table[@id="proxy_list"]/tbody/tr')
+            for proxy in proxies:
+                ip_base64 = proxy.xpath('./td[1]/script/text()')
+                port = proxy.xpath('./td[2]')
+                yield "%s:%s" % (base64.b64decode(ip_base64).decode('utf-8'), port)
+        except:
+            pass
+
 
 if __name__ == '__main__':
     p = ProxyFetcher()
-    for _ in p.freeProxy11():
+    for _ in p.wallProxy03():
         print(_)
 
 # http://nntime.com/proxy-list-01.htm
