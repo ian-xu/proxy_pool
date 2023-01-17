@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 services:
   proxy_pool:
     build: .
@@ -11,4 +11,6 @@ services:
       DB_CONN: "redis://@proxy_redis:6379/0"
   proxy_redis:
     image: "redis"
+    ports:
+      - "6379:6379"
     container_name: proxy_redis

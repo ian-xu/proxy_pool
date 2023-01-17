@@ -14,9 +14,44 @@ __author__ = 'JHao'
 
 import re
 import json
+from random import randint
 from time import sleep
 
 from util.webRequest import WebRequest
+
+DEFAULT_HEADERS = {
+    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+    'accept-encoding': 'gzip, deflate, br',
+    'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-US;q=0.7',
+    'cache-control': 'max-age=0',
+    # 'sec-ch-ua': '"Not_A Brand";v="99", "Google Chrome";v="108", "Chromium";v="108"',
+    'sec-ch-ua-mobile': '?0',
+    # 'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'same-origin',
+    'sec-fetch-user': '?1',
+    'upgrade-insecure-requests': '1',
+}
+
+USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.67 Safari/537.36 Edg/87.0.664.52",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Safari/605.1.15",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:88.0) Gecko/20100101 Firefox/88.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36 Edg/86.0.622.69",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36"
+]
+
+
+def _get_random_user_agent():
+    random_index = randint(0, len(USER_AGENTS) - 1)
+    return USER_AGENTS[random_index]
 
 
 class ProxyFetcher(object):
@@ -30,14 +65,15 @@ class ProxyFetcher(object):
         站大爷 https://www.zdaye.com/dayProxy.html
         """
         start_url = "https://www.zdaye.com/dayProxy.html"
-        html_tree = WebRequest().get(start_url).tree
+        DEFAULT_HEADERS['User-Agent'] = _get_random_user_agent()
+        html_tree = WebRequest().get(start_url, header=DEFAULT_HEADERS, verify=False).tree
         latest_page_time = html_tree.xpath("//span[@class='thread_time_info']/text()")[0].strip()
         from datetime import datetime
         interval = datetime.now() - datetime.strptime(latest_page_time, "%Y/%m/%d %H:%M:%S")
-        if interval.seconds < 300:  # 只采集5分钟内的更新
+        if interval.seconds < 111300:  # 只采集5分钟内的更新
             target_url = "https://www.zdaye.com/" + html_tree.xpath("//h3[@class='thread_title']/a/@href")[0].strip()
             while target_url:
-                _tree = WebRequest().get(target_url).tree
+                _tree = WebRequest().get(target_url, verify=False).tree
                 for tr in _tree.xpath("//table//tr"):
                     ip = "".join(tr.xpath("./td[1]/text()")).strip()
                     port = "".join(tr.xpath("./td[2]/text()")).strip()
@@ -70,23 +106,23 @@ class ProxyFetcher(object):
                 port = "".join(tr.xpath('./td[2]/text()')).strip()
                 yield "%s:%s" % (ip, port)
 
-    @staticmethod
-    def freeProxy04():
-        """ FreeProxyList https://www.freeproxylists.net/zh/ """
-        url = "https://www.freeproxylists.net/zh/?c=CN&pt=&pr=&a%5B%5D=0&a%5B%5D=1&a%5B%5D=2&u=50"
-        tree = WebRequest().get(url, verify=False).tree
-        from urllib import parse
-
-        def parse_ip(input_str):
-            html_str = parse.unquote(input_str)
-            ips = re.findall(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', html_str)
-            return ips[0] if ips else None
-
-        for tr in tree.xpath("//tr[@class='Odd']") + tree.xpath("//tr[@class='Even']"):
-            ip = parse_ip("".join(tr.xpath('./td[1]/script/text()')).strip())
-            port = "".join(tr.xpath('./td[2]/text()')).strip()
-            if ip:
-                yield "%s:%s" % (ip, port)
+    # @staticmethod
+    # def freeProxy04():
+    #     """ FreeProxyList https://www.freeproxylists.net/zh/ """
+    #     url = "https://www.freeproxylists.net/zh/?c=CN&pt=&pr=&a%5B%5D=0&a%5B%5D=1&a%5B%5D=2&u=50"
+    #     tree = WebRequest().get(url, verify=False).tree
+    #     from urllib import parse
+    #
+    #     def parse_ip(input_str):
+    #         html_str = parse.unquote(input_str)
+    #         ips = re.findall(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', html_str)
+    #         return ips[0] if ips else None
+    #
+    #     for tr in tree.xpath("//tr[@class='Odd']") + tree.xpath("//tr[@class='Even']"):
+    #         ip = parse_ip("".join(tr.xpath('./td[1]/script/text()')).strip())
+    #         port = "".join(tr.xpath('./td[2]/text()')).strip()
+    #         if ip:
+    #             yield "%s:%s" % (ip, port)
 
     @staticmethod
     def freeProxy05(page_count=1):
@@ -145,7 +181,7 @@ class ProxyFetcher(object):
         """ 免费代理库 """
         for i in range(1, page_count + 1):
             url = 'http://ip.jiangxianli.com/?country=中国&page={}'.format(i)
-            html_tree = WebRequest().get(url).tree
+            html_tree = WebRequest().get(url, verify=False).tree
             for index, tr in enumerate(html_tree.xpath("//table//tr")):
                 if index == 0:
                     continue
@@ -161,28 +197,28 @@ class ProxyFetcher(object):
         for proxy in proxies:
             yield ':'.join(proxy)
 
-    # @staticmethod
-    # def wallProxy01():
-    #     """
-    #     PzzQz https://pzzqz.com/
-    #     """
-    #     from requests import Session
-    #     from lxml import etree
-    #     session = Session()
-    #     try:
-    #         index_resp = session.get("https://pzzqz.com/", timeout=20, verify=False).text
-    #         x_csrf_token = re.findall('X-CSRFToken": "(.*?)"', index_resp)
-    #         if x_csrf_token:
-    #             data = {"http": "on", "ping": "3000", "country": "cn", "ports": ""}
-    #             proxy_resp = session.post("https://pzzqz.com/", verify=False,
-    #                                       headers={"X-CSRFToken": x_csrf_token[0]}, json=data).json()
-    #             tree = etree.HTML(proxy_resp["proxy_html"])
-    #             for tr in tree.xpath("//tr"):
-    #                 ip = "".join(tr.xpath("./td[1]/text()"))
-    #                 port = "".join(tr.xpath("./td[2]/text()"))
-    #                 yield "%s:%s" % (ip, port)
-    #     except Exception as e:
-    #         print(e)
+    @staticmethod
+    def wallProxy01():
+        """
+        PzzQz https://pzzqz.com/
+        """
+        from requests import Session
+        from lxml import etree
+        session = Session()
+        try:
+            index_resp = session.get("https://pzzqz.com/", timeout=20, verify=False).text
+            x_csrf_token = re.findall('X-CSRFToken": "(.*?)"', index_resp)
+            if x_csrf_token:
+                data = {"http": "on", "ping": "3000", "country": "cn", "ports": ""}
+                proxy_resp = session.post("https://pzzqz.com/", verify=False,
+                                          headers={"X-CSRFToken": x_csrf_token[0]}, json=data).json()
+                tree = etree.HTML(proxy_resp["proxy_html"])
+                for tr in tree.xpath("//tr"):
+                    ip = "".join(tr.xpath("./td[1]/text()"))
+                    port = "".join(tr.xpath("./td[2]/text()"))
+                    yield "%s:%s" % (ip, port)
+        except Exception as e:
+            print(e)
 
     # @staticmethod
     # def freeProxy10():
@@ -208,25 +244,26 @@ class ProxyFetcher(object):
     #     request = WebRequest()
     #     import base64
     #     for url in urls:
-    #         r = request.get(url, timeout=10)
+    #         DEFAULT_HEADERS['User-Agent'] = _get_random_user_agent()
+    #         r = request.get(url, header=DEFAULT_HEADERS, verify=False, timeout=10)
     #         proxies = re.findall(r"Proxy\('(.*?)'\)", r.text)
     #         for proxy in proxies:
     #             yield base64.b64decode(proxy).decode()
 
-    # @staticmethod
-    # def freeProxy12():
-    #     urls = ['https://list.proxylistplus.com/Fresh-HTTP-Proxy-List-1']
-    #     request = WebRequest()
-    #     for url in urls:
-    #         r = request.get(url, timeout=10)
-    #         proxies = re.findall(r'<td>(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})</td>[\s\S]*?<td>(\d+)</td>', r.text)
-    #         for proxy in proxies:
-    #             yield ':'.join(proxy)
+    @staticmethod
+    def freeProxy12():
+        urls = ['https://list.proxylistplus.com/Fresh-HTTP-Proxy-List-1']
+        request = WebRequest()
+        for url in urls:
+            r = request.get(url, timeout=10)
+            proxies = re.findall(r'<td>(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})</td>[\s\S]*?<td>(\d+)</td>', r.text)
+            for proxy in proxies:
+                yield ':'.join(proxy)
 
 
 if __name__ == '__main__':
     p = ProxyFetcher()
-    for _ in p.freeProxy06():
+    for _ in p.freeProxy11():
         print(_)
 
 # http://nntime.com/proxy-list-01.htm
