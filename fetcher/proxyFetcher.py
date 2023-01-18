@@ -15,8 +15,11 @@ __author__ = 'JHao'
 import base64
 import re
 import json
+import urllib.parse
 from random import randint
 from time import sleep
+
+from lxml import etree
 
 from util.webRequest import WebRequest
 
@@ -278,20 +281,112 @@ class ProxyFetcher(object):
     def wallProxy03():
         request = WebRequest()
         try:
-            resp = request.get("http://free-proxy.cz/en/", timeout=20, verify=False).tree
-            # proxies = resp.xpath('//tbody/tr/td/table[2]/tbody/tr/td[1]/font[@class="spy14"]/text()')
+            resp = request.get("https://free-proxy.cz/en/", timeout=10, verify=False).tree
             proxies = resp.xpath('//table[@id="proxy_list"]/tbody/tr')
             for proxy in proxies:
                 ip_base64 = proxy.xpath('./td[1]/script/text()')
                 port = proxy.xpath('./td[2]')
                 yield "%s:%s" % (base64.b64decode(ip_base64).decode('utf-8'), port)
-        except:
-            pass
+        except Exception as e:
+            print(e)
+
+    @staticmethod
+    def wallProxy04():
+        request = WebRequest()
+        try:
+            resp = request.get("https://hidemy.name/en/proxy-list/", timeout=10, verify=False).tree
+            proxies = resp.xpath('//div[@class="table_block"]/table/tbody/tr')
+            for proxy in proxies:
+                ip = "".join(proxy.xpath('./td[1]/text()')).strip()
+                port = "".join(proxy.xpath('./td[2]/text()')).strip()
+                yield "%s:%s" % (ip, port)
+        except Exception as e:
+            print(e)
+
+    # @staticmethod
+    # def wallProxy05():
+    #     request = WebRequest()
+    #     try:
+    #         DEFAULT_HEADERS['User-Agent'] = _get_random_user_agent()
+    #         resp = request.get("https://www.proxydocker.com/", header=DEFAULT_HEADERS, timeout=10, verify=False).tree
+    #         token = "".join(resp.xpath('//meta[@name="_token"]/@content')).strip()
+    #         import requests
+    #         data = {
+    #             'token': token,
+    #             'country': 'all',
+    #             'city': 'all',
+    #             'state': 'all',
+    #             'port': 'all',
+    #             'type': 'all',
+    #             'anonymity': 'all',
+    #             'need': 'all',
+    #             'page': 1,
+    #         }
+    #         api_resps = requests.post('https://www.proxydocker.com/en/api/proxylist/', headers=DEFAULT_HEADERS,
+    #                                   data=data).json()
+    #         if api_resps['tows_count'] != 0:
+    #             for api_resp in api_resps['proxies']:
+    #                 yield "%s:%s" % (api_resp['ip'], api_resp['port'])
+    #     except Exception as e:
+    #         print(e)
+
+    @staticmethod
+    def wallProxy06():
+        request = WebRequest()
+        try:
+            resp = request.get("https://free-proxy-list.net/", timeout=10, verify=False).tree
+            tr = resp.xpath('//div[@class="table-responsive"]/div/table/tbody/tr')
+            for t in tr:
+                ip = "".join(t.xpath('./td[1]/text()')).strip()
+                port = "".join(t.xpath('./td[2]/text()')).strip()
+                yield "%s:%s" % (ip, port)
+        except Exception as e:
+            print(e)
+
+    @staticmethod
+    def wallProxy07():
+        request = WebRequest()
+        try:
+            pattern = re.compile(r'\"(.*?)\"')
+            resp = request.get("https://www.freeproxylists.net/zh/", timeout=10, verify=False).tree
+            tr = resp.xpath('//table[@class="DataGrid"]//tr')
+            for t in tr:
+                ip_encode = "".join(t.xpath('./td[1]/script/text()')).strip()
+                if ip_encode == "":
+                    continue
+                result = pattern.findall(ip_encode)
+                if len(result) == 0:
+                    continue
+                ip = urllib.parse.unquote_plus("".join(result).strip())
+                ip = "".join(etree.HTML(ip).xpath("//a/text()")).strip()
+                port = "".join(t.xpath('./td[2]/text()')).strip()
+                yield "%s:%s" % (ip, port)
+        except Exception as e:
+            print(e)
+
+    @staticmethod
+    def wallProxy08():
+        request = WebRequest()
+        try:
+            resp = request.get("https://www.proxynova.com/proxy-server-list/", timeout=10, verify=False).tree
+            tr = resp.xpath('//table[@id="tbl_proxy_list"]/tbody/tr')
+            pattern = re.compile(r'[(](.*)[)]', re.S)
+            for t in tr:
+                ip_encode = "".join(t.xpath('./td[1]/script/text()')).strip()
+                if ip_encode == "":
+                    continue
+                result = pattern.findall(ip_encode)
+                if len(result) == 0:
+                    continue
+                ip = urllib.parse.unquote_plus("".join(result).strip())
+                ip = "".join(etree.HTML(ip).xpath("//a/text()")).strip()
+                port = "".join(t.xpath('./td[2]/text()')).strip()
+                yield "%s:%s" % (ip, port)
+        except Exception as e:
+            print(e)
 
 
 if __name__ == '__main__':
     p = ProxyFetcher()
-    for _ in p.wallProxy03():
+    for _ in p.wallProxy07():
         print(_)
-
-# http://nntime.com/proxy-list-01.htm
